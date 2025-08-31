@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天気予報アプリ - Enhanced Version</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-bg: linear-gradient(135deg, #74b9ff, #0984e3);
+            --dark-bg: linear-gradient(135deg, #2d3436, #636e72);
+            --card-light: rgba(255, 255, 255, 0.15);
+            --card-dark: rgba(0, 0, 0, 0.3);
+            --text-light: white;
+            --text-dark: #2d3436;
+            --accent-color: #00b894;
+            --accent-hover: #00a085;
+            --warning-color: #fdcb6e;
+            --danger-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            min-height: 100vh;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode {
+            background: var(--dark-bg);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            background: var(--card-light);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 50px;
+            padding: 10px 15px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .theme-toggle:hover {
+            background: var(--card-dark);
+            transform: scale(1.05);
+        }
+
+        .demo-notice {
+            background: var(--card-light);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: var(--text-light);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .demo-notice h3 {
+            margin-bottom: 10px;
+            color: var(--warning-color);
+        }
+
+        .card {
+            background: var(--card-light);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--text-light);
+            font-size: 16px;
+            outline: none;
+            min-width: 200px;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 25px;
+            background: var(--accent-color);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .favorites-container {
+            margin: 20px 0;
+        }
+
+        .favorites-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .favorite-item {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .favorite-item:hover {
+            background: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .favorite-remove {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .favorite-item:hover .favorite-remove {
+            display: block;
+        }
+
+        .current-weather {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 30px;
+        }
+
+        .weather-icon {
+            font-size: 80px;
+            margin: 20px 0;
+        }
+
+        .temperature {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .detail-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+        }
+
+        .chart-container {
+            background: var(--card-light);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-canvas {
+            max-height: 300px;
+        }
+
+        .forecast-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .forecast-item {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            color: var(--text-light);
+            transition: transform 0.3s ease;
+        }
+
+        .forecast-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .notification {
+            background: var(--accent-color);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease-out;
+            cursor: pointer;
+        }
+
+        .notification.warning {
+            background: var(--warning-color);
+        }
+
+        .notification.danger {
+            background: var(--danger-color);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 18px;
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .github-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--card-light);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            padding: 10px 20px;
+            color: var(--text-light);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .github-link:hover {
+            background: var(--card-dark);
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .temperature {
+                font-size: 36px;
+            }
+            
+            .weather-icon {
+                font-size: 60px;
+            }
+            
+            .github-link {
+                position: static;
+                display: block;
+                text-align: center;
+                margin: 20px 0;
+            }
+
+            .theme-toggle {
+                position: static;
+                margin-bottom: 20px;
+            }
+
+            .search-container {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+
+        /* Dark mode adjustments */
+        body.dark-mode .demo-notice,
+        body.dark-mode .card,
+        body.dark-mode .chart-container {
+            background: var(--card-dark);
+            color: var(--text-light);
+        }
+
+        body.dark-mode input[type="text"] {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <a href="#" class="github-link">📂 GitHub Repository</a>
+    
+    <div class="notification-container" id="notificationContainer"></div>
+    
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()">🌙 ダークモード</button>
+            <h1>🌤️ 天気予報アプリ</h1>
+            <p>Enhanced Portfolio Version</p>
+        </div>
+
+        <div class="demo-notice">
+            <h3>🎯 機能強化版 ポートフォリオ</h3>
+            <p><strong>新機能：</strong> ダークモード、お気に入り都市、気温チャート、天気アラート</p>
+            <p><strong>技術スタック：</strong> HTML5, CSS3, JavaScript (ES6+), Chart.js, LocalStorage API, Notifications API</p>
+        </div>
+
+        <div class="card">
+            <div class="search-container">
+                <input type="text" id="cityInput" placeholder="都市名を入力 (例: Tokyo, Osaka)" />
+                <button onclick="searchWeather()">🔍 検索</button>
+                <button onclick="getCurrentLocation()">📍 現在地</button>
+                <button class="secondary" onclick="addToFavorites()">⭐ お気に入り追加</button>
+            </div>
+
+            <div class="favorites-container">
+                <h4 style="color: white; margin-bottom: 10px;">⭐ お気に入り都市</h4>
+                <div class="favorites-list" id="favoritesList"></div>
+            </div>
+
+            <div id="weatherDisplay">
+                <div class="current-weather">
+                    <h2>東京, 日本</h2>
+                    <div class="weather-icon">☀️</div>
+                    <div class="temperature">22°C</div>
+                    <p>晴れ - 体感温度 24°C</p>
+                    
+                    <div class="weather-details">
+                        <div class="detail-item">
+                            <h4>💧 湿度</h4>
+                            <p>65%</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>💨 風速</h4>
+                            <p>3.2 m/s</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>🎈 気圧</h4>
+                            <p>1013 hPa</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>👁️ 視界</h4>
+                            <p>10 km</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 style="color: white; margin-bottom: 20px;">📊 気温推移グラフ</h3>
+                    <canvas id="temperatureChart" class="chart-canvas"></canvas>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: white; margin-bottom: 20px;">📅 5日間の予報</h3>
+                    <div class="forecast-container" id="forecastDisplay">
+                        <div class="forecast-item">
+                            <h4>今日</h4>
+                            <div style="font-size: 40px; margin: 10px 0;">☀️</div>
+                            <p>晴れ</p>
+                            <p><strong>22° / 15°</strong></p>
+                        </div>
+                        <div class="forecast-item">
+                            <h4>明日</h4>
+                            <div style="font-size: 40px; margin: 10px 0;">⛅</div>
+                            <p>曇り時々晴れ</p>
+                            <p><strong>20° / 13°</strong></p>
+                        </div>
+                        <div class="forecast-item">
+                            <h4>9/2</h4>
+                            <div style="font-size: 40px; margin: 10px 0;">🌧️</div>
+                            <p>雨</p>
+                            <p><strong>18° / 11°</strong></p>
+                        </div>
+                        <div class="forecast-item">
+                            <h4>9/3</h4>
+                            <div style="font-size: 40px; margin: 10px 0;">⛈️</div>
+                            <p>雷雨</p>
+                            <p><strong>16° / 9°</strong></p>
+                        </div>
+                        <div class="forecast-item">
+                            <h4>9/4</h4>
+                            <div style="font-size: 40px; margin: 10px 0;">☀️</div>
+                            <p>晴れ</p>
+                            <p><strong>24° / 16°</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const DEMO_MODE = true;
+        const API_KEY = 'DEMO_MODE';
+        
+        // Global state
+        let currentWeatherData = null;
+        let temperatureChart = null;
+        let isDarkMode = false;
+
+        // Demo data
+        const demoData = {
+            tokyo: {
+                name: '東京', country: 'JP', temp: 22, feels_like: 24, humidity: 65,
+                wind_speed: 3.2, pressure: 1013, visibility: 10, weather: '晴れ', icon: '☀️'
+            },
+            osaka: {
+                name: '大阪', country: 'JP', temp: 25, feels_like: 27, humidity: 70,
+                wind_speed: 2.8, pressure: 1015, visibility: 8, weather: '曇り', icon: '⛅'
+            },
+            london: {
+                name: 'ロンドン', country: 'GB', temp: 15, feels_like: 13, humidity: 85,
+                wind_speed: 4.5, pressure: 1008, visibility: 5, weather: '雨', icon: '🌧️'
+            },
+            newyork: {
+                name: 'ニューヨーク', country: 'US', temp: 18, feels_like: 20, humidity: 72,
+                wind_speed: 3.8, pressure: 1012, visibility: 9, weather: '曇り', icon: '☁️'
+            }
+        };
+
+        // ===== THEME TOGGLE =====
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            
+            const themeToggle = document.querySelector('.theme-toggle');
+            themeToggle.textContent = isDarkMode ? '☀️ ライトモード' : '🌙 ダークモード';
+            
+            // Save theme preference
+            localStorage.setItem('darkMode', isDarkMode);
+            
+            // Update chart if exists
+            if (temperatureChart) {
+                updateChartTheme();
+            }
+            
+            showNotification('テーマを切り替えました', 'info');
+        }
+
+        // ===== FAVORITES MANAGEMENT =====
+        function loadFavorites() {
+            const favorites = JSON.parse(localStorage.getItem('favoriteCities') || '[]');
+            displayFavorites(favorites);
+        }
+
+        function saveFavorites(favorites) {
+            localStorage.setItem('favoriteCities', JSON.stringify(favorites));
+        }
+
+        function addToFavorites() {
+            if (!currentWeatherData) {
+                showNotification('天気データを取得してからお気に入りに追加してください', 'warning');
+                return;
+            }
+
+            const favorites = JSON.parse(localStorage.getItem('favoriteCities') || '[]');
+            const cityName = currentWeatherData.name;
+            
+            if (favorites.includes(cityName)) {
+                showNotification(`${cityName}は既にお気に入りに追加されています`, 'warning');
+                return;
+            }
+
+            favorites.push(cityName);
+            saveFavorites(favorites);
+            displayFavorites(favorites);
+            showNotification(`${cityName}をお気に入りに追加しました`, 'info');
+        }
+
+        function removeFromFavorites(cityName) {
+            const favorites = JSON.parse(localStorage.getItem('favoriteCities') || '[]');
+            const updatedFavorites = favorites.filter(city => city !== cityName);
+            saveFavorites(updatedFavorites);
+            displayFavorites(updatedFavorites);
+            showNotification(`${cityName}をお気に入りから削除しました`, 'info');
+        }
+
+        function displayFavorites(favorites) {
+            const favoritesList = document.getElementById('favoritesList');
+            
+            if (favorites.length === 0) {
+                favoritesList.innerHTML = '<p style="color: rgba(255,255,255,0.7); font-size: 14px;">お気に入りの都市はありません</p>';
+                return;
+            }
+
+            favoritesList.innerHTML = favorites.map(city => `
+                <div class="favorite-item" onclick="searchFavoriteCity('${city}')">
+                    ${city}
+                    <button class="favorite-remove" onclick="event.stopPropagation(); removeFromFavorites('${city}')">×</button>
+                </div>
+            `).join('');
+        }
+
+        function searchFavoriteCity(cityName) {
+            document.getElementById('cityInput').value = cityName;
+            searchWeather();
+        }
+
+        // ===== NOTIFICATIONS =====
+        function showNotification(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>${message}</span>
+                    <span style="cursor: pointer; font-weight: bold;" onclick="this.parentElement.parentElement.remove()">×</span>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Auto remove
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, duration);
+
+            // Request notification permission
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
+            // Show browser notification for weather alerts
+            if (type === 'danger' && Notification.permission === 'granted') {
+                new Notification('天気アラート', {
+                    body: message,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'
+                });
+            }
+        }
+
+        // ===== WEATHER ALERTS =====
+        function checkWeatherAlerts(weatherData) {
+            const temp = weatherData.temp;
+            const weather = weatherData.weather.toLowerCase();
+            
+            if (temp > 35) {
+                showNotification(`⚠️ 猛暑警報: ${temp}°C - 熱中症にご注意ください`, 'danger');
+            } else if (temp < 0) {
+                showNotification(`❄️ 低温警報: ${temp}°C - 防寒対策をしてください`, 'danger');
+            }
+            
+            if (weather.includes('雷') || weather.includes('storm')) {
+                showNotification('⛈️ 雷雨警報: 外出時はご注意ください', 'danger');
+            } else if (weather.includes('雨') || weather.includes('rain')) {
+                showNotification('🌧️ 降雨情報: 傘をお忘れなく', 'warning');
+            }
+            
+            if (weatherData.wind_speed > 10) {
+                showNotification(`💨 強風警報: 風速${weatherData.wind_speed}m/s`, 'warning');
+            }
+        }
+
+        // ===== TEMPERATURE CHART =====
+        function createTemperatureChart(data) {
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+            
+            if (temperatureChart) {
+                temperatureChart.destroy();
+            }
+
+            const chartData = {
+                labels: ['6時', '9時', '12時', '15時', '18時', '21時', '24時'],
+                datasets: [{
+                    label: '気温 (°C)',
+                    data: data,
+                    borderColor: '#74b9ff',
+                    backgroundColor: 'rgba(116, 185, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0984e3',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            };
+
+            temperatureChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: isDarkMode ? '#ffffff' : '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: isDarkMode ? '#ffffff' : '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: isDarkMode ? '#ffffff' : '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartTheme() {
+            if (!temperatureChart) return;
+            
+            temperatureChart.options.plugins.legend.labels.color = '#ffffff';
+            temperatureChart.options.scales.x.ticks.color = '#ffffff';
+            temperatureChart.options.scales.y.ticks.color = '#ffffff';
+            temperatureChart.update();
+        }
+
+        function generateDemoTemperatureData(baseTemp) {
+            return [
+                baseTemp - 3,  // 6時
+                baseTemp - 1,  // 9時
+                baseTemp + 2,  // 12時
+                baseTemp + 5,  // 15時（最高気温）
+                baseTemp + 2,  // 18時
+                baseTemp - 1,  // 21時
+                baseTemp - 2   // 24時
+            ];
+        }
+
+        // ===== MAIN WEATHER FUNCTIONS =====
+        function searchWeather() {
+            const city = document.getElementById('cityInput').value.trim();
+            if (!city) {
+                showNotification('都市名を入力してください', 'warning');
+                return;
+            }
+
+            showLoading();
+            
+            if (DEMO_MODE) {
+                setTimeout(() => {
+                    const cityKey = city.toLowerCase().includes('tokyo') || city.toLowerCase().includes('東京') ? 'tokyo' :
+                                  city.toLowerCase().includes('osaka') || city.toLowerCase().includes('大阪') ? 'osaka' :
+                                  city.toLowerCase().includes('london') || city.toLowerCase().includes('ロンドン') ? 'london' :
+                                  city.toLowerCase().includes('new york') || city.toLowerCase().includes('ニューヨーク') ? 'newyork' : 'tokyo';
+                    
+                    const weatherData = demoData[cityKey];
+                    currentWeatherData = weatherData;
+                    displayWeather(weatherData);
+                    displayForecast(generateDemoForecast());
+                    createTemperatureChart(generateDemoTemperatureData(weatherData.temp));
+                    checkWeatherAlerts(weatherData);
+                    showNotification(`${weatherData.name}の天気を取得しました`, 'info');
+                }, 1000);
+            }
+        }
+
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                showNotification('位置情報がサポートされていません', 'warning');
+                return;
+            }
+
+            showLoading();
+            
+            if (DEMO_MODE) {
+                setTimeout(() => {
+                    const weatherData = demoData.tokyo;
+                    currentWeatherData = weatherData;
+                    displayWeather(weatherData);
+                    displayForecast(generateDemoForecast());
+                    createTemperatureChart(generateDemoTemperatureData(weatherData.temp));
+                    checkWeatherAlerts(weatherData);
+                    showNotification('現在地の天気を取得しました（デモ: 東京）', 'info');
+                }, 1500);
+            }
+        }
+
+        function displayWeather(data) {
+            const weatherDisplay = document.getElementById('weatherDisplay');
+            
+            weatherDisplay.innerHTML = `
+                <div class="current-weather">
+                    <h2>${data.name}, ${data.country}</h2>
+                    <div class="weather-icon">${data.icon}</div>
+                    <div class="temperature">${data.temp}°C</div>
+                    <p>${data.weather} - 体感温度 ${data.feels_like}°C</p>
+                    
+                    <div class="weather-details">
+                        <div class="detail-item">
+                            <h4>💧 湿度</h4>
+                            <p>${data.humidity}%</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>💨 風速</h4>
+                            <p>${data.wind_speed} m/s</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>🎈 気圧</h4>
+                            <p>${data.pressure} hPa</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>👁️ 視界</h4>
+                            <p>${data.visibility} km</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 style="color: white; margin-bottom: 20px;">📊 気温推移グラフ</h3>
+                    <canvas id="temperatureChart" class="chart-canvas"></canvas>
+                </div>
+
+                <div class="card">
+                    <h3 style="color: white; margin-bottom: 20px;">📅 5日間の予報</h3>
+                    <div class="forecast-container" id="forecastDisplay"></div>
+                </div>
+            `;
+        }
+
+        function displayForecast(forecastData) {
+            const forecastDisplay = document.getElementById('forecastDisplay');
+            
+            forecastDisplay.innerHTML = forecastData.map(day => `
+                <div class="forecast-item">
+                    <h4>${day.date}</h4>
+                    <div style="font-size: 40px; margin: 10px 0;">${day.icon}</div>
+                    <p>${day.weather}</p>
+                    <p><strong>${day.high}° / ${day.low}°</strong></p>
+                </div>
+            `).join('');
+        }
+
+        function generateDemoForecast() {
+            return [
+                { date: '今日', icon: '☀️', weather: '晴れ', high: 22, low: 15 },
+                { date: '明日', icon: '⛅', weather: '曇り時々晴れ', high: 20, low: 13 },
+                { date: '9/2', icon: '🌧️', weather: '雨', high: 18, low: 11 },
+                { date: '9/3', icon: '⛈️', weather: '雷雨', high: 16, low: 9 },
+                { date: '9/4', icon: '☀️', weather: '晴れ', high: 24, low: 16 }
+            ];
+        }
+
+        function showLoading() {
+            document.getElementById('weatherDisplay').innerHTML = `
+                <div class="loading">
+                    <p>🔄 天気情報を取得中...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('weatherDisplay').innerHTML = `
+                <div class="error">
+                    <p>❌ ${message}</p>
+                </div>
+            `;
+        }
+
+        // ===== INITIALIZATION =====
+        window.addEventListener('load', () => {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('darkMode');
+            if (savedTheme === 'true') {
+                isDarkMode = true;
+                document.body.classList.add('dark-mode');
+                document.querySelector('.theme-toggle').textContent = '☀️ ライトモード';
+            }
+
+            // Load favorites
+            loadFavorites();
+
+            // Initialize with demo data
+            const weatherData = demoData.tokyo;
+            currentWeatherData = weatherData;
+            displayWeather(weatherData);
+            displayForecast(generateDemoForecast());
+            
+            // Wait for DOM to be ready for chart
+            setTimeout(() => {
+                createTemperatureChart(generateDemoTemperatureData(weatherData.temp));
+            }, 100);
+
+            // Request notification permission
+            if (Notification.permission === 'default') {
+                showNotification('通知を有効にすると天気アラートを受け取れます', 'info');
+                setTimeout(() => {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            showNotification('通知が有効になりました', 'info');
+                        }
+                    });
+                }, 2000);
+            }
+
+            console.log('🌤️ Enhanced Weather App - All Features Loaded');
+            console.log('🎯 Features: Dark Mode, Favorites, Charts, Notifications');
+        });
+
+        // Enter key support
+        document.addEventListener('DOMContentLoaded', () => {
+            const cityInput = document.getElementById('cityInput');
+            if (cityInput) {
+                cityInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        searchWeather();
+                    }
+                });
+            }
+        });
+
+        // Real API functions (for when API key is configured)
+        async function fetchWeatherData(city) {
+            if (DEMO_MODE) return;
+            
+            try {
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=ja`
+                );
+                
+                if (!response.ok) {
+                    throw new Error('都市が見つかりません');
+                }
+                
+                const data = await response.json();
+                displayWeatherFromAPI(data);
+                fetchForecastData(data.coord.lat, data.coord.lon);
+                
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function fetchWeatherByCoords(lat, lon) {
+            if (DEMO_MODE) return;
+            
+            try {
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=ja`
+                );
+                
+                const data = await response.json();
+                displayWeatherFromAPI(data);
+                fetchForecastData(lat, lon);
+                
+            } catch (error) {
+                showError('天気情報の取得に失敗しました');
+            }
+        }
+
+        function displayWeatherFromAPI(data) {
+            const weatherIcons = {
+                'clear': '☀️', 'clouds': '⛅', 'rain': '🌧️', 'drizzle': '🌦️',
+                'thunderstorm': '⛈️', 'snow': '❄️', 'mist': '🌫️'
+            };
+
+            const weatherData = {
+                name: data.name,
+                country: data.sys.country,
+                temp: Math.round(data.main.temp),
+                feels_like: Math.round(data.main.feels_like),
+                humidity: data.main.humidity,
+                wind_speed: data.wind.speed,
+                pressure: data.main.pressure,
+                visibility: Math.round(data.visibility / 1000),
+                weather: data.weather[0].description,
+                icon: weatherIcons[data.weather[0].main.toLowerCase()] || '🌤️'
+            };
+            
+            currentWeatherData = weatherData;
+            displayWeather(weatherData);
+            createTemperatureChart(generateDemoTemperatureData(weatherData.temp));
+            checkWeatherAlerts(weatherData);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'k':
+                        e.preventDefault();
+                        document.getElementById('cityInput').focus();
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        toggleTheme();
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        getCurrentLocation();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
