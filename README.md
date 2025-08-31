@@ -45,9 +45,6 @@
 ### デスクトップ版
 ![Desktop View](screenshots/desktop.png)
 
-### モバイル版
-![Mobile View](screenshots/mobile.png)
-
 ## 🚀 セットアップ
 
 ### 前提条件
@@ -278,10 +275,10 @@ console.log('API Key:', API_KEY.substring(0, 8) + '...');
 
 ## 👤 作成者
 
-**あなたの名前**
-- GitHub: [@your-username](https://github.com/your-username)
-- Email: your.email@example.com
-- Portfolio: [your-portfolio.com](https://your-portfolio.com)
+**たいき**
+- GitHub: [@/tkskgch1114-cmd](https://github.com//tkskgch1114-cmd)
+- Email: tk.skgch1114@gmail.com
+- Portfolio: [たいき-portfolio.com](https://tkskgch1114-cmd.github.io/taiki-portfolio/)
 
 ## 🙏 謝辞
 
